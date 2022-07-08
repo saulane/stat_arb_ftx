@@ -43,7 +43,6 @@ class FTXClient():
         signature_payload = f'{ts}{prepared.method}{prepared.path_url}'.encode()
         if prepared.body:
             signature_payload += prepared.body
-        print(signature_payload)
         signature = hmac.new(self._api_secret.encode(), signature_payload, 'sha256').hexdigest()
 
         request.headers['FTX-KEY'] = self._api_key
@@ -236,15 +235,8 @@ class FTXClient():
                 break
         return results
 
-    def get_historical_prices(
-        self, market: str, resolution: int = 300, start_time: float = None,
-        end_time: float = None
-    ) -> List[dict]:
-        return self._get(f'markets/{market}/candles', {
-            'resolution': resolution,
-            'start_time': start_time,
-            'end_time': end_time
-        })
+    def get_historical_prices(self, market: str, resolution: int = 300, start_time: float = None, end_time: float = None) -> List[dict]:
+        return self._get(f'markets/{market}/candles?resolution={resolution}', {"start_time": start_time, "end_time": end_time})
 
     def get_last_historical_prices(self, market: str, resolution: int = 300) -> List[dict]:
         return self._get(f'markets/{market}/candles/last', {'resolution': resolution})
@@ -350,6 +342,3 @@ class FTXClient():
 
     def get_latency_stats(self, days: int = 1, subaccount_nickname: str = None) -> Dict:
         return self._get('stats/latency_stats', {'days': days, 'subaccount_nickname': subaccount_nickname})
-
-test = FTX_REST_Manager()
-print(test.place_order("BTC-PERP", "buy", "10", "0.00001"))

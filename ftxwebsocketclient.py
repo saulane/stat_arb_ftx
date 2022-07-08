@@ -46,7 +46,7 @@ class FTXWebsocketClient():
             self.tickers[msg["market"]] = msg["data"]
             # print(msg)
             self._process_ticker(msg)
-            print(self.stored_tickers)
+            # print(self.stored_tickers)
         elif msg["channel"] == "trade":
             self.trades[msg["market"]] = msg["data"]
 
@@ -117,7 +117,7 @@ class FTXWebsocketClient():
             self.ws_lock.release()
 
 
-test = FTXWebsocketClient()
-test.connect()
-test.subscribe({"channel": "ticker", "market": "ETH-PERP"})
-test.subscribe({"channel": "ticker", "market": "ADA-PERP"})
+# test = FTXWebsocketClient()
+# test.connect()
+# test.subscribe({"channel": "ticker", "market": "ETH-PERP"})
+# test.subscribe({"channel": "ticker", "market": "ADA-PERP"})
