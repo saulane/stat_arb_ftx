@@ -8,13 +8,11 @@ from collections import deque
 
 class Future():
     def __init__(self, id: str, hist: List[Dict]) -> None:
-        self.id = id
+        self.id = id.split("-", maxsplit=1)[0]
 
-        self.raw_hist = hist
+        self._raw_hist = hist
 
         self.historical_data = pd.DataFrame(hist)
-
-        self.current_prices = deque([], maxlen = 100000)
 
         self.closes: List = [i["close"] for i in hist]
         self.highs: List = [i["high"] for i in hist]
@@ -26,39 +24,30 @@ class Future():
         self.end = self.historical_data["startTime"].values[-1]
 
 class Pairs():
-    def __init__(self, id, a = None, b = None) -> None:
-        self.id = id
+    def __init__(self, a: Future = None, b: Future = None) -> None:
+        assert len(a.historical_data) == len(b.historical_data)
+        self.id = a.id + "/" +b.id
         self.a = a
         self.b = b
-        self.coint_res = None
-        pass
+        self.cointegration_test_result = None
+
+        self.spread = abs(self.a.historical_data["close"] - self.b.historical_data["close"])
+        self.spread_mean = np.mean(self.spread)
+        self.spread_std = np.std(self.spread)
     
-    def update(self, a = None, b = None):
-        self.a = a if a != None else self.a
-        self.b = b if b != None else self.b
+    def update_spread(self, a = None, b = None):
+        self.spread = abs(a - b)
 
-    def push(self, a = None, b = None):
-        if a != None:
-            a.append(a)
-            dropped = a.pop(0)
-        
-        if b != None:
-            b.append(b)
-            dropped = b.pop(0)
-
-    def coint_test(self):
-        res = coint(self.a, self.b)
-        self.coint_res = res
+    def test_cointegration(self):
+        res = coint(self.a.historical_data["close"].values, self.b.historical_data["close"].values)
         return res
 
     def is_coint(self) -> bool:
-        test_result = self.coint_test()
-        if test_result[0] < test_result[2][0]:
-            return True
-        else:
-            return False
+        self.cointegration_test_result = self.test_cointegration()
+        return self.cointegration_test_result[0] < self.cointegration_test_result[2][0]
 
-client = FTXClient()
+    def __repr__(self) -> str:
+        return f"{self.id!r} spread std is {self.spread_std!r}"
 
 def get_all_futures_filtered(client: FTXClient):
     futures = client.get_all_futures()

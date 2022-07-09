@@ -4,6 +4,8 @@ import yaml
 import json
 import websocket
 
+from threading import Thread, Lock
+
 from typing import Optional, Dict, Any, List
 
 import hmac
