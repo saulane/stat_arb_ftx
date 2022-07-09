@@ -13,11 +13,6 @@ class Future():
         self._raw_hist = hist
 
         self.historical_data = pd.DataFrame(hist)
-
-        self.closes: List = [i["close"] for i in hist]
-        self.highs: List = [i["high"] for i in hist]
-        self.lows: List = [i["low"] for i in hist]
-        self.opens: List = [i["open"] for i in hist]
         
         self.resolution = (self.historical_data["time"][1] - self.historical_data["time"][0]) / 1000
         self.start = self.historical_data["startTime"][0]
@@ -25,22 +20,29 @@ class Future():
 
 class Pairs():
     def __init__(self, a: Future = None, b: Future = None) -> None:
-        assert len(a.historical_data) == len(b.historical_data)
+        if len(a.historical_data)!= len(b.historical_data):
+            raise ValueError("Historical data must be the same size")
         self.id = a.id + "/" +b.id
         self.a = a
         self.b = b
         self.cointegration_test_result = None
 
-        self.spread = abs(self.a.historical_data["close"] - self.b.historical_data["close"])
-        self.spread_mean = np.mean(self.spread)
-        self.spread_std = np.std(self.spread)
+        self.spread_hist = abs(self.a.historical_data["close"] - self.b.historical_data["close"])
+        self.spread_mean = np.mean(self.spread_hist)
+        self.spread_std = np.std(self.spread_hist)
+
+        self.curr_spread = self.spread_hist.values[-1]
     
     def update_spread(self, a = None, b = None):
-        self.spread = abs(a - b)
+        self.curr_spread = abs(a - b)
+        return self.is_opportunity()
 
     def test_cointegration(self):
         res = coint(self.a.historical_data["close"].values, self.b.historical_data["close"].values)
         return res
+
+    def is_opportunity(self) -> bool:
+        return self.curr_spread > self.spread_mean+2*self.spread_std
 
     def is_coint(self) -> bool:
         self.cointegration_test_result = self.test_cointegration()
@@ -58,14 +60,14 @@ def get_all_futures_filtered(client: FTXClient):
 
     return filtered
 
-def make_pairs(futures):
-    n = len(futures)
-    pairs = []
-    for i in range(n):
-        for j in range(i+1, n):
-            pairs.append(Pairs(f"{futures[i]}/{futures[j]}"))
+# def make_pairs(futures):
+#     n = len(futures)
+#     pairs = []
+#     for i in range(n):
+#         for j in range(i+1, n):
+#             pairs.append(Pairs(f"{futures[i]}/{futures[j]}"))
 
-    return list(map(lambda x: x.id, pairs))
+#     return list(map(lambda x: x.id, pairs))
 
 # print(make_pairs(get_all_futures_filtered(client)))
 

@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
             if pair.is_coint():
                 coints.append(pair)
-                print(f"{pair.id} are cointegrated")
+                print(f"{pair.id} are cointegrated, {pair.is_opportunity()}")
             else:
                 del pair
 
