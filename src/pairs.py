@@ -26,7 +26,7 @@ class Pairs():
 
         self.a_id = a.id
         self.b_id = b.id
-        
+
         self.a = a
         self.b = b
         self.cointegration_test_result = None
@@ -39,7 +39,7 @@ class Pairs():
     
     def update_spread(self, a = None, b = None):
         self.curr_spread = abs(a - b)
-        return self.is_opportunity()
+        # return self.check_opportunity()
 
     def test_cointegration(self):
         res = coint(self.a.historical_data["close"].values, self.b.historical_data["close"].values)
