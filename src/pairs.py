@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.stattools import adfuller, coint
-from ftxclient import FTXClient
+from ftx import FTXClient
 from typing import Any, Dict, List
 import pandas as pd
 from collections import deque
@@ -23,6 +23,10 @@ class Pairs():
         if len(a.historical_data)!= len(b.historical_data):
             raise ValueError("Historical data must be the same size")
         self.id = a.id + "/" +b.id
+
+        self.a_id = a.id
+        self.b_id = b.id
+        
         self.a = a
         self.b = b
         self.cointegration_test_result = None
@@ -41,7 +45,7 @@ class Pairs():
         res = coint(self.a.historical_data["close"].values, self.b.historical_data["close"].values)
         return res
 
-    def is_opportunity(self) -> bool:
+    def check_opportunity(self) -> bool:
         return self.curr_spread > self.spread_mean+2*self.spread_std
 
     def is_coint(self) -> bool:

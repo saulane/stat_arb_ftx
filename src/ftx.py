@@ -6,6 +6,8 @@ import websocket
 
 from threading import Thread, Lock
 
+from database import Database
+
 from typing import Optional, Dict, Any, List
 
 import hmac
@@ -347,15 +349,15 @@ class FTXClient():
         return self._get('stats/latency_stats', {'days': days, 'subaccount_nickname': subaccount_nickname})
 
 
-
-
 class FTXWebsocketClient():
     _ENDPOINT = "wss://ftx.com/ws/"
 
-    def __init__(self):
+    def __init__(self, db: Database):
         self.ws: websocket.WebSocketApp = None
         self.ws_thread: Thread = None
         self.ws_lock: Lock = Lock()
+
+        self.db = db
 
         self.subscriptions: List[Dict] = []
         self.tickers: Dict[Dict] = {}
@@ -368,13 +370,11 @@ class FTXWebsocketClient():
 
 
     def _process_ticker(self,ticker):
-        tick_name = ticker["market"]
+        name = ticker["market"].split("-")[0]
         data = ticker["data"]
         last = data["last"]
 
-
-        self.stored_tickers[tick_name] = last
-        # self.stored_tickers[tick_name].append(last)
+        self.db.update_crypto(name, last)
 
     def _on_message(self, ws, raw_msg):
         msg = json.loads(raw_msg)
@@ -384,10 +384,7 @@ class FTXWebsocketClient():
             return
 
         if msg["channel"] == "ticker":
-            self.tickers[msg["market"]] = msg["data"]
-            # print(msg)
             self._process_ticker(msg)
-            # print(self.stored_tickers)
         elif msg["channel"] == "trade":
             self.trades[msg["market"]] = msg["data"]
 
@@ -402,7 +399,6 @@ class FTXWebsocketClient():
         except Exception as e:
             raise Exception(f'Unexpected error while running websocket: {e}')
 
-    
     def _connect(self):
         self.ws = websocket.WebSocketApp(
             "wss://ftx.com/ws/",
