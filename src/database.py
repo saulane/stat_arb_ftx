@@ -3,20 +3,30 @@ import time
 
 class Database():
     def __init__(self, file) -> None:
-        self.conn = None
-        self._file = file
+        self.__file = file
+
+        try:
+            self.__connection = sqlite3.connect(self.__file)
+            self.__cursor = self.__connection.cursor()
+        except sqlite3.Error as e:
+            print(e)
 
         self._create_live_table()
         self._create_pairs_table()
 
-    def _create_connection(self):
-        """ create a database connection to a SQLite database"""
-        try:
-            conn = sqlite3.connect(self._file)
-        except sqlite3.Error as e:
-            print(e)
-        
-        return conn
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ext_type, exc_value, traceback):
+        self.__cursor.close()
+        if isinstance(exc_value, Exception):
+            self.__connection.rollback()
+        else:
+            self.__connection.commit()
+        self.__connection.close()
+
+    def __del__(self):
+        self.__connection.close()
 
     def _create_live_table(self):
         live_table = """CREATE TABLE IF NOT EXISTS live_prices (
@@ -25,9 +35,7 @@ class Database():
                                 last_update integer
                                 );"""
         try:
-            conn = self._create_connection()
-            cur = conn.cursor()
-            cur.execute(live_table)
+            self.__cursor.execute(live_table)
         except sqlite3.Error as e:
             print(e)
 
@@ -55,12 +63,11 @@ class Database():
                                 WHERE b_name=new.name;
                             END;"""
         try:
-            conn = self._create_connection()
-            cur = conn.cursor()
+
             # cur.execute("""DROP TABLE IF EXISTS pairs;""")
-            cur.execute(pairs_table)
-            cur.execute(price_trigger)
-            cur.execute(pairs_trigger)
+            self.__cursor.execute(pairs_table)
+            self.__cursor.execute(price_trigger)
+            self.__cursor.execute(pairs_trigger)
         except sqlite3.Error as e:
             print(e)
 
@@ -72,10 +79,8 @@ class Database():
                     VALUES(?,?,?,?,?,?)
                     ON CONFLICT(id) DO UPDATE
                     SET a_price=?, b_price=?, spread=?"""   
-        conn = self._create_connection()
-        cur = conn.cursor()
-        cur.execute(sql, pair)
-        conn.commit()
+
+        self.__cursor.execute(sql, pair)
 
     def update_pair(self, id, a_price, b_price):
         pair = (a_price, b_price, id)
@@ -83,18 +88,13 @@ class Database():
                 SET a_price = ?, b_price = ?
                 WHERE id = ?"""
 
-        conn = self._create_connection()
-        curr = conn.cursor()
-        curr.execute(sql, pair)
-        conn.commit()
+
+        self.__cursor.execute(sql, pair)
 
     def delete_pair(self, id):
         sql = """DELETE FROM pairs WHERE id=?;"""
 
-        conn = self._create_connection()
-        curr = conn.cursor()
-        curr.execute(sql, (id,))
-        conn.commit()
+        self.__cursor.execute(sql, (id,))
 
     def update_crypto(self, name, price):
         crypto = (name, price, int(time.time()), price, int(time.time()))
@@ -103,23 +103,26 @@ class Database():
                 ON CONFLICT(name) DO UPDATE 
                 SET price=?, last_update=?"""
 
-        conn = self._create_connection()
-        cur = conn.cursor()
-        cur.execute(sql, crypto)
-        conn.commit()
+        self.__cursor.execute(sql, crypto)
 
     def get_all_crypto_prices(self):
-        conn = self._create_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM live_prices")
+        self.__cursor.execute("SELECT * FROM live_prices")
 
-        rows = cur.fetchall()
+        rows = self.__cursor.fetchall()
+
+        return rows
+
+    def get_all_spread(self):
+        self.__cursor.execute("SELECT * from pairs")
+
+        rows = self.__cursor.fetchall()
 
         return rows
 
 
 db = Database(r"db/arbitrage.db")
-# db.update_crypto("ETH", 12789)
+with db:
+    db.update_crypto("ETH", 12789)
 # db.update_crypto("BCH", 127)
 # print(db.get_all_crypto_prices())
 

@@ -6,11 +6,15 @@ import time
 from database import Database
 import pandas as pd
 import numpy as np
+import yaml
 
 from tqdm import tqdm
 
+with open("config.yaml", "r") as ymlfile:
+    cfg = yaml.safe_load(ymlfile)
 
 if __name__ == "__main__":
+    db = Database(cfg["database_file"])
     client = FTXClient()
     futures_id = get_all_futures_filtered(client)
     # print(client.get_historical_prices("BTC-PERP"))
@@ -19,7 +23,6 @@ if __name__ == "__main__":
         futures.append(Future(future, client.get_historical_prices(future, resolution=300,start_time=time.time()-300000, end_time=time.time())))
     
 
-    db = Database("db/arbitrage.db")
     list_crypto = []
     coints: List[Pairs] = []
     for i in range(len(futures)):

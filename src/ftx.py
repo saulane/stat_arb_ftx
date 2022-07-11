@@ -373,8 +373,9 @@ class FTXWebsocketClient():
         name = ticker["market"].split("-")[0]
         data = ticker["data"]
         last = data["last"]
-
-        self.db.update_crypto(name, last)
+        
+        with self.db as db:
+            db.update_crypto(name, last)
 
     def _on_message(self, ws, raw_msg):
         msg = json.loads(raw_msg)
